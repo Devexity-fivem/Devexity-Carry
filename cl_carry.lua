@@ -118,26 +118,10 @@ Citizen.CreateThread(function()
                 if not IsEntityPlayingAnim(PlayerPedId(), carry.personCarried.animDict, carry.personCarried.anim, 3) then
                     TaskPlayAnim(PlayerPedId(), carry.personCarried.animDict, carry.personCarried.anim, 8.0, -8.0, -1, carry.personCarried.flag, 0, false, false, false)
                 end
-
-                -- Combat and Weapon Controls
-                DisableControlAction(0, 24, true)   -- Attack
-                DisableControlAction(0, 257, true)  -- Attack 2
-                DisableControlAction(0, 25, true)   -- Aim
-                DisableControlAction(0, 263, true)  -- Melee Attack 1
-                DisableControlAction(0, 47, true)   -- Disable weapon
-                DisableControlAction(0, 264, true)  -- Disable melee
-                DisableControlAction(0, 140, true)  -- Disable melee
-                DisableControlAction(0, 141, true)  -- Disable melee
-                DisableControlAction(0, 142, true)  -- Disable melee
-                DisableControlAction(0, 143, true)  -- Disable melee
-                DisableControlAction(0, 16, true)  -- Disable shift
-                DisableControlAction(0, 76, true)  -- Disable L
-
-                -- Inventory Controls
-                DisableControlAction(0, 289, true)  -- F2 (ox_inventory, some QBCore inventories)
-                DisableControlAction(0, 37, true)   -- Tab (QBCore Inventory)
-                DisableControlAction(0, 170, true)  -- F3 (Sometimes used for inventory)
-
+                
+                --disable all control actions
+                DisableAllControlActions(0)
+            
                 -- Force Close ox_inventory if open
                 if exports.ox_inventory then
                     exports.ox_inventory:closeInventory()
