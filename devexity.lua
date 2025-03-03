@@ -25,7 +25,7 @@ AddEventHandler("onResourceStart", function(resourceName)
             print(MAGENTA .. "======================================================" .. RESET)
             
             -- Subtext
-            print(CYAN .. "               Thanks for using Devexity Scripts!              " .. RESET)
+            print(CYAN .. "            Thanks for using Devexity Scripts!              " .. RESET)
         end)
     end
 end)
