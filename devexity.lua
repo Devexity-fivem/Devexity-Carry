@@ -11,27 +11,21 @@ AddEventHandler("onResourceStart", function(resourceName)
             local MAGENTA = "\27[35m"
             local RESET = "\27[0m"
             
-            -- top border
-            print(MAGENTA .. "======================================================================================================" .. RESET)
-
-            -- stylized ASCII title (Devexity)
-            print(BLUE   .. " /$$$$$$$                                          /$$   /$$                     /$$$$$$$                       /$$                                                         /$$    " .. RESET)
-            print(CYAN   .. "| $$__  $$                                        |__/  | $$                    | $$__  $$                     | $$                                                        | $$    " .. RESET)
-            print(GREEN  .. "| $$  \\ $$  /$$$$$$  /$$    /$$ /$$$$$$  /$$   /$$ /$$ /$$$$$$   /$$   /$$      | $$  \\ $$  /$$$$$$  /$$    /$$| $$  /$$$$$$   /$$$$$$  /$$$$$$/$$$$   /$$$$$$  /$$$$$$$  /$$$$$$  " .. RESET)
-            print(YELLOW .. "| $$  | $$ /$$__  $$|  $$  /$$//$$__  $$|  $$ /$$/| $$|_  $$_/  | $$  | $$      | $$  | $$ /$$__  $$|  $$  /$$/| $$ /$$__  $$ /$$__  $$| $$_  $$_  $$ /$$__  $$| $$__  $$|_  $$_/  " .. RESET)
-            print(MAGENTA.. "| $$  | $$| $$$$$$$$ \\  $$/$$/| $$$$$$$$ \\  $$$$/ | $$  | $$    | $$  | $$      | $$  | $$| $$$$$$$$ \\  $$/$$/ | $$| $$  \\ $$| $$  \\ $$| $$ \\ $$ \\ $$| $$$$$$$$| $$  \\ $$  | $$    " .. RESET)
-            print(BLUE   .. "| $$  | $$| $$_____/  \\  $$$/ | $$_____/  >$$  $$ | $$  | $$ /$$| $$  | $$      | $$  | $$| $$_____/  \\  $$$/  | $$| $$  | $$| $$  | $$| $$ | $$ | $$| $$_____/| $$  | $$  | $$ /$$" .. RESET)
-            print(CYAN   .. "| $$$$$$$/|  $$$$$$$   \\  $/  |  $$$$$$$ /$$/\\  $$| $$  |  $$$$/|  $$$$$$$      | $$$$$$$/|  $$$$$$$   \\  $/   | $$|  $$$$$$/| $$$$$$$/| $$ | $$ | $$|  $$$$$$$| $$  | $$  |  $$$$/" .. RESET)
-            print(GREEN  .. "|_______/  \\_______/    \\_/    \\_______/|__/  \\__/|__/   \\___/   \\____  $$      |_______/  \\_______/    \\_/    |__/ \\______/ | $$____/ |__/ |__/ |__/ \\_______/|__/  |__/   \\___/  " .. RESET)
-            print(YELLOW .. "                                                                 /$$  | $$                                                   | $$                                                   " .. RESET)
-            print(MAGENTA.. "                                                                |  $$$$$$/                                                   | $$                                                   " .. RESET)
-            print(BLUE   .. "                                                                 \\______/                                                    |__/                                                   " .. RESET)
-
-            -- tag line
-            print(CYAN ..    "                 Carry the vibe • Devexity Scripts • 2025                 " .. RESET)
-
-            -- bottom border
-            print(MAGENTA .. "======================================================================================================" .. RESET)
+            -- Box top
+            print(MAGENTA .. "======================================================" .. RESET)
+            
+            -- Colored ASCII art with outline
+            print(BLUE .. "DDDDD   EEEEE  V   V  EEEEE  X   X  III  TTTTT  Y   Y" .. RESET)
+            print(CYAN .. "D    D  E      V   V  E       X X    I     T     Y Y " .. RESET)
+            print(GREEN .. "D    D  EEEE   V   V  EEEE     X     I     T      Y  " .. RESET)
+            print(YELLOW .. "D    D  E      V   V  E       X X    I     T      Y  " .. RESET)
+            print(MAGENTA .. "DDDDD   EEEEE   V V   EEEEE  X   X  III    T      Y  " .. RESET)
+            
+            -- Box bottom
+            print(MAGENTA .. "======================================================" .. RESET)
+            
+            -- Subtext
+            print(CYAN .. "            Thanks for using Devexity Scripts!              " .. RESET)
         end)
     end
 end)
