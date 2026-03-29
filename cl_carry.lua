@@ -81,23 +81,31 @@ end
 
 local function GetClosestPlayer(radius)
     local players = GetActivePlayers()
-    local closestDistance = -1
+    local closestDistance = radius + 1 -- Start with radius + 1 for early exit
     local closestPlayer = -1
     local playerPed = PlayerPedId()
     local playerCoords = GetEntityCoords(playerPed)
+    local radiusSquared = radius * radius -- Use squared distance for comparison
 
     for _, playerId in ipairs(players) do
         local targetPed = GetPlayerPed(playerId)
         if targetPed ~= playerPed then
             local targetCoords = GetEntityCoords(targetPed)
-            local distance = #(targetCoords - playerCoords)
-            if closestDistance == -1 or closestDistance > distance then
+            local distanceSquared = #(targetCoords - playerCoords) * #(targetCoords - playerCoords)
+            
+            -- Early exit if distance is already greater than current closest
+            if distanceSquared < radiusSquared and distanceSquared < closestDistance * closestDistance then
                 closestPlayer = playerId
-                closestDistance = distance
+                closestDistance = math.sqrt(distanceSquared)
+                
+                -- Early exit if we found a very close player
+                if closestDistance < 1.0 then
+                    break
+                end
             end
         end
     end
-    return (closestDistance ~= -1 and closestDistance <= radius) and closestPlayer or nil
+    return (closestPlayer ~= -1 and closestDistance <= radius) and closestPlayer or nil
 end
 
 local function ensureAnimDict(animDict)
@@ -241,21 +249,13 @@ local function putCarriedPlayerInTrunk()
         return false
     end
 
+    -- Batch vehicle property checks to reduce native calls
     local vehClass = GetVehicleClass(closestVehicle)
     local vehModel = GetEntityModel(closestVehicle)
+    local trunkOpen = GetVehicleDoorAngleRatio(closestVehicle, 5) > 0
     
-    -- Check if vehicle class allows trunk
-    if not trunkClasses[vehClass] or not trunkClasses[vehClass].allowed then
-        return false
-    end
-
-    -- Check if vehicle is disabled
-    if disabledTrunk[vehModel] then
-        return false
-    end
-
-    -- Check if trunk is open
-    if GetVehicleDoorAngleRatio(closestVehicle, 5) <= 0 then
+    -- Check all conditions in one go
+    if not trunkOpen or not trunkClasses[vehClass] or not trunkClasses[vehClass].allowed or disabledTrunk[vehModel] then
         return false
     end
 
@@ -366,40 +366,61 @@ AddEventHandler("CarryPeople:exitTrunk", function()
 end)
 
 Citizen.CreateThread(function()
+    local lastAnimCheck = 0
+    local ANIM_CHECK_INTERVAL = 500 -- Check every 500ms instead of every frame
+    
     while true do
         if carry.InProgress then
-            if carry.type == "beingcarried" then
-                if not IsEntityPlayingAnim(PlayerPedId(), carry.personCarried.animDict, carry.personCarried.anim, 3) then
-                    TaskPlayAnim(PlayerPedId(), carry.personCarried.animDict, carry.personCarried.anim, 8.0, -8.0, -1, carry.personCarried.flag, 0, false, false, false)
-                end
+            local currentTime = GetGameTimer()
             
-                -- Force Close ox_inventory if open
-                if exports.ox_inventory then
-                    exports.ox_inventory:closeInventory()
-                end
+            if currentTime - lastAnimCheck > ANIM_CHECK_INTERVAL then
+                lastAnimCheck = currentTime
+                
+                if carry.type == "beingcarried" then
+                    if not IsEntityPlayingAnim(PlayerPedId(), carry.personCarried.animDict, carry.personCarried.anim, 3) then
+                        TaskPlayAnim(PlayerPedId(), carry.personCarried.animDict, carry.personCarried.anim, 8.0, -8.0, -1, carry.personCarried.flag, 0, false, false, false)
+                    end
+                
+                    -- Force Close ox_inventory if open
+                    if exports.ox_inventory then
+                        exports.ox_inventory:closeInventory()
+                    end
 
-            elseif carry.type == "carrying" then
-                if not IsEntityPlayingAnim(PlayerPedId(), carry.personCarrying.animDict, carry.personCarrying.anim, 3) then
-                    TaskPlayAnim(PlayerPedId(), carry.personCarrying.animDict, carry.personCarrying.anim, 8.0, -8.0, -1, carry.personCarrying.flag, 0, false, false, false)
+                elseif carry.type == "carrying" then
+                    if not IsEntityPlayingAnim(PlayerPedId(), carry.personCarrying.animDict, carry.personCarrying.anim, 3) then
+                        TaskPlayAnim(PlayerPedId(), carry.personCarrying.animDict, carry.personCarrying.anim, 8.0, -8.0, -1, carry.personCarrying.flag, 0, false, false, false)
+                    end
                 end
             end
+            
+            Wait(100) -- Reduced frequency when carrying
+        else
+            Wait(1000) -- Longer sleep when not carrying
         end
-        Wait(0)
     end
 end)
 
 -- Trunk camera thread
 Citizen.CreateThread(function()
+    local lastCamUpdate = 0
+    local CAM_UPDATE_INTERVAL = 50 -- Update camera every 50ms
+    
     while true do
         local sleep = 1000
         if DoesCamExist(trunk.cam) then
             local vehicle = trunk.vehicle
             if vehicle and DoesEntityExist(vehicle) then
-                sleep = 0
-                local drawPos = GetOffsetFromEntityInWorldCoords(vehicle, 0, -5.5, 0)
-                local vehHeading = GetEntityHeading(vehicle)
-                SetCamRot(trunk.cam, -2.5, 0.0, vehHeading, 0.0)
-                SetCamCoord(trunk.cam, drawPos.x, drawPos.y, drawPos.z + 2)
+                local currentTime = GetGameTimer()
+                if currentTime - lastCamUpdate > CAM_UPDATE_INTERVAL then
+                    lastCamUpdate = currentTime
+                    sleep = 0
+                    local drawPos = GetOffsetFromEntityInWorldCoords(vehicle, 0, -5.5, 0)
+                    local vehHeading = GetEntityHeading(vehicle)
+                    SetCamRot(trunk.cam, -2.5, 0.0, vehHeading, 0.0)
+                    SetCamCoord(trunk.cam, drawPos.x, drawPos.y, drawPos.z + 2)
+                else
+                    sleep = 10
+                end
             end
         end
         Wait(sleep)
@@ -435,22 +456,33 @@ Citizen.CreateThread(function()
     local lastPlate = nil
     local lastBusyCheck = 0
     local cachedIsBusy = false
+    local lastVehicleCheck = 0
+    local cachedVehicle = nil
+    local VEHICLE_CHECK_INTERVAL = 1000 -- Cache vehicle for 1 second
     
     while true do
         local sleep = 1000
         
         -- Check if player is carrying someone
         if carry.type == "carrying" and carry.InProgress then
+            local currentTime = GetGameTimer()
             local playerPed = PlayerPedId()
             local coords = GetEntityCoords(playerPed)
             local closestVehicle = nil
             
-            -- Try to get closest vehicle using lib if available
-            if lib and lib.getClosestVehicle then
-                closestVehicle = lib.getClosestVehicle(coords, 5.0, false)
+            -- Cache vehicle detection
+            if cachedVehicle and DoesEntityExist(cachedVehicle) and (currentTime - lastVehicleCheck) < VEHICLE_CHECK_INTERVAL then
+                closestVehicle = cachedVehicle
             else
-                -- Fallback method
-                closestVehicle = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71)
+                -- Try to get closest vehicle using lib if available
+                if lib and lib.getClosestVehicle then
+                    closestVehicle = lib.getClosestVehicle(coords, 5.0, false)
+                else
+                    -- Fallback method
+                    closestVehicle = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71)
+                end
+                cachedVehicle = closestVehicle
+                lastVehicleCheck = currentTime
             end
 
             if closestVehicle and closestVehicle ~= 0 then
@@ -461,11 +493,10 @@ Citizen.CreateThread(function()
                 -- Check if vehicle allows trunk and trunk is open
                 if trunkOpen and trunkClasses[vehClass] and trunkClasses[vehClass].allowed and not disabledTrunk[vehModel] then
                     local plate = getVehiclePlate(closestVehicle)
-                    local currentTime = GetGameTimer()
                     local isBusy = false
                     
-                    -- Cache the busy check for 500ms to avoid spamming callbacks
-                    if plate == lastPlate and (currentTime - lastBusyCheck) < 500 then
+                    -- Cache the busy check for 1000ms to avoid spamming callbacks
+                    if plate == lastPlate and (currentTime - lastBusyCheck) < 1000 then
                         -- Use cached result
                         isBusy = cachedIsBusy
                     else
@@ -476,7 +507,7 @@ Citizen.CreateThread(function()
                     end
                     
                     if not isBusy then
-                        sleep = 0
+                        sleep = 100
                         if not showingTextUI then
                             if lib and lib.showTextUI then
                                 lib.showTextUI('[E] Put in Trunk')
@@ -495,8 +526,10 @@ Citizen.CreateThread(function()
                                 lastPlate = nil
                                 lastBusyCheck = 0
                                 cachedIsBusy = false
+                                cachedVehicle = nil
+                                lastVehicleCheck = 0
                             end
-                            Wait(50) -- Reduced from 100ms
+                            Wait(50)
                         end
                     else
                         if showingTextUI then
@@ -530,6 +563,8 @@ Citizen.CreateThread(function()
                 lastPlate = nil
                 lastBusyCheck = 0
                 cachedIsBusy = false
+                cachedVehicle = nil
+                lastVehicleCheck = 0
             end
         else
             if showingTextUI then
@@ -541,6 +576,8 @@ Citizen.CreateThread(function()
             lastPlate = nil
             lastBusyCheck = 0
             cachedIsBusy = false
+            cachedVehicle = nil
+            lastVehicleCheck = 0
         end
         
         Wait(sleep)

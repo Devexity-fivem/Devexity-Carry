@@ -4,7 +4,7 @@ games { 'gta5' }
 
 author 'devexity'
 description 'Carry script for fivem'
-version '1.2.0'
+version '1.3.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
